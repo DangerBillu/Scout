@@ -1,0 +1,3 @@
+# Scout's core runtime intentionally uses the Python standard library.
+# Install this file for the optional test runner used by development.
+pytest>=8.0,<9.0

@@ -20,6 +20,7 @@ class Trade:
     costs: float
     net_pnl: float
     entry_index: int
+    slippage_cost: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -93,23 +94,28 @@ def run_backtest(bars: tuple[Bar, ...], strategy: MovingAverageCross,
     for i in range(1, n):
         desired = signals[i - 1]  # signal from prior close, executed at this bar's open
         if position is None and desired:
-            price = bars[i].open * (1 + strategy.slippage_rate)
+            raw_price = bars[i].open
+            price = raw_price * (1 + strategy.slippage_rate)
             fee = price * strategy.quantity * strategy.fee_rate
-            position = (i, price, fee + price * strategy.quantity * strategy.slippage_rate)
+            slippage = (price - raw_price) * strategy.quantity
+            position = (i, price, fee + slippage, raw_price)
         elif position is not None and not desired:
-            entry_i, entry, entry_cost = position
-            exit_price = bars[i].open * (1 - strategy.slippage_rate)
-            exit_cost = exit_price * strategy.quantity * strategy.fee_rate + bars[i].open * strategy.quantity * strategy.slippage_rate
-            gross = (exit_price - entry) * strategy.quantity
-            costs = entry_cost + exit_cost
+            entry_i, entry, entry_cost, raw_entry = position
+            raw_exit = bars[i].open
+            exit_price = raw_exit * (1 - strategy.slippage_rate)
+            exit_fee = exit_price * strategy.quantity * strategy.fee_rate
+            exit_slippage = (raw_exit - exit_price) * strategy.quantity
+            gross = (raw_exit - raw_entry) * strategy.quantity
+            costs = entry_cost + exit_fee + exit_slippage
             trade = Trade(bars[entry_i].timestamp.isoformat(), bars[i].timestamp.isoformat(), entry,
-                          exit_price, strategy.quantity, gross, costs, gross - costs, entry_i)
+                          exit_price, strategy.quantity, gross, costs, gross - costs, entry_i,
+                          entry_cost - (entry * strategy.quantity * strategy.fee_rate) + exit_slippage)
             trades.append(trade)
             realized += trade.net_pnl
             position = None
         if position:
             exposure += 1
-            entry_i, entry, entry_cost = position
+            entry_i, entry, entry_cost, raw_entry = position
             unrealized = (bars[i].close - entry) * strategy.quantity - entry_cost
         else:
             unrealized = 0.0

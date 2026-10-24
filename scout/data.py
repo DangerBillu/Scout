@@ -12,6 +12,21 @@ SUPPORTED_INSTRUMENTS = {"NSE:NIFTY50", "NSE:NIFTYBANK"}
 
 
 @dataclass(frozen=True)
+class InstrumentMetadata:
+    instrument: str
+    display_name: str
+    exchange: str
+    timezone: str
+    regular_session: str
+
+
+INSTRUMENT_METADATA = {
+    "NSE:NIFTY50": InstrumentMetadata("NSE:NIFTY50", "NIFTY 50", "NSE", "Asia/Kolkata", "09:15-15:30"),
+    "NSE:NIFTYBANK": InstrumentMetadata("NSE:NIFTYBANK", "NIFTY BANK", "NSE", "Asia/Kolkata", "09:15-15:30"),
+}
+
+
+@dataclass(frozen=True)
 class Bar:
     timestamp: datetime
     open: float
