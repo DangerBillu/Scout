@@ -93,11 +93,12 @@ These endpoints are intended for local paper research. The server has no
 authentication and binds to `127.0.0.1` by default; do not expose it to a
 network without adding authentication and authorization.
 
-To connect live quotes, set `TWELVE_DATA_API_KEY` in `.env`, confirm the
-provider's exact NIFTY symbols, and click **Connect quote** in the terminal. The
-server fetches and validates the quote only on that explicit action; blank or
-invalid provider responses remain unavailable. The provider's plan determines
-whether a symbol is real-time or delayed.
+The terminal uses Yahoo Finance chart data for `^NSEI` (NIFTY 50) and
+`^NSEBANK` (NIFTY BANK) and fetches it only after you click **Connect quote**.
+Yahoo does not require a key for this chart feed, but its data may be delayed or
+rate-limited. Scout validates the returned bars and leaves the quote unavailable
+when the response is invalid or fails. Review Yahoo's terms and data rights
+before using the feed beyond local research.
 
 ## Tests
 

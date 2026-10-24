@@ -11,7 +11,7 @@ from scout.discovery import DiscoveryConfig, discover
 from scout.ingestion import CsvSourceAdapter
 from scout.idea_checker import check_idea
 from scout.agent import reply
-from scout.market import TwelveDataProvider
+from scout.market import YahooFinanceProvider
 from scout.knowledge import KnowledgeDocument, KnowledgeStore
 from scout.monitoring import check_health
 from scout.model import HuggingFaceAdapter, UnavailableModel
@@ -40,8 +40,25 @@ class ServiceTests(unittest.TestCase):
     def test_chat_stays_local_and_provider_requires_key(self):
         answer = reply("Explain a stop loss")
         self.assertFalse(answer.available)
-        with self.assertRaisesRegex(RuntimeError, "API_KEY"):
-            TwelveDataProvider(api_key="").latest("NSE:NIFTY50")
+        provider = YahooFinanceProvider(endpoint="http://127.0.0.1:1/")
+        self.assertEqual(provider.symbols["NSE:NIFTY50"], "^NSEI")
+        self.assertEqual(provider.symbols["NSE:NIFTYBANK"], "^NSEBANK")
+
+    def test_yahoo_chart_payload_is_validated(self):
+        class Response:
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, _limit):
+                import json
+                return json.dumps({"chart": {"result": [{"meta": {"regularMarketPrice": 101},
+                    "timestamp": [1735722900, 1735723200], "indicators": {"quote": [{
+                        "open": [100, 101], "high": [102, 103], "low": [99, 100],
+                        "close": [101, 102], "volume": [1000, 1100]}]}}]}}).encode()
+        with patch("scout.market.urlopen", return_value=Response()):
+            provider = YahooFinanceProvider(endpoint="https://example.test/chart/")
+            recent = provider.recent("NSE:NIFTY50", "5m", 2)
+            self.assertEqual(len(recent), 2)
+            self.assertEqual(provider.latest("NSE:NIFTY50", "5m").provider, "yahoo_finance")
 
     def test_supported_instrument_metadata_is_explicit(self):
         self.assertEqual(INSTRUMENT_METADATA["NSE:NIFTY50"].exchange, "NSE")

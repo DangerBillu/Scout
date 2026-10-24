@@ -19,11 +19,12 @@ provides a CSV adapter with dataset version, source identity, ingestion time,
 coverage, and missing-interval warnings. It does not silently fill gaps or
 perform corporate-action adjustments.
 
-`scout.market.TwelveDataProvider` is an opt-in quote adapter. It requires an
-explicit API key and configurable provider symbols, validates returned bars, and
-returns provenance. The browser requests quotes only after the user clicks
-Connect quote. No quote is fabricated when the provider is unavailable. Paper
-orders use the latest validated quote and remain inside `PaperPortfolio`.
+`scout.market.YahooFinanceProvider` reads Yahoo Finance chart data for `^NSEI`
+and `^NSEBANK`, validates returned bars, and returns provenance. The browser
+requests quotes only after the user clicks Connect quote. The feed may be
+delayed or rate-limited and is not treated as a licensed execution feed. No
+quote is fabricated when the provider is unavailable. Paper orders use the
+latest validated quote and remain inside `PaperPortfolio`.
 
 ## Backtest assumptions
 

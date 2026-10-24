@@ -19,7 +19,7 @@ from .discovery import DiscoveryConfig, discover
 from .automation import AutomationJob
 from .ingestion import CsvSourceAdapter
 from .idea_checker import check_idea
-from .market import TwelveDataProvider, market_provider_status
+from .market import YahooFinanceProvider, market_provider_status
 from .portfolio import PaperPortfolio
 from .agent import reply as agent_reply
 from .knowledge import KnowledgeStore
@@ -234,7 +234,7 @@ def make_handler():
             elif parsed.path == "/api/market/quote":
                 query = parse_qs(parsed.query)
                 try:
-                    quote = TwelveDataProvider().latest(query.get("instrument", ["NSE:NIFTY50"])[0],
+                    quote = YahooFinanceProvider().latest(query.get("instrument", ["NSE:NIFTY50"])[0],
                                                         query.get("timeframe", ["5m"])[0])
                     self._respond(200, "application/json", json.dumps(quote.__dict__))
                 except (RuntimeError, ValueError) as exc:
@@ -242,9 +242,9 @@ def make_handler():
             elif parsed.path == "/api/market/candles":
                 query = parse_qs(parsed.query)
                 try:
-                    bars = TwelveDataProvider().recent(query.get("instrument", ["NSE:NIFTY50"])[0],
+                    bars = YahooFinanceProvider().recent(query.get("instrument", ["NSE:NIFTY50"])[0],
                                                         query.get("timeframe", ["5m"])[0])
-                    self._respond(200, "application/json", json.dumps({"live": True, "provider": "twelvedata",
+                    self._respond(200, "application/json", json.dumps({"live": True, "provider": "yahoo_finance",
                         "bars": [bar.__dict__ | {"timestamp": bar.timestamp.isoformat()} for bar in bars]}))
                 except (RuntimeError, ValueError) as exc:
                     self._respond(503, "application/json", json.dumps({"error": str(exc), "live": False}))
@@ -252,7 +252,7 @@ def make_handler():
                 query = parse_qs(parsed.query)
                 try:
                     instrument = query.get("instrument", ["NSE:NIFTY50"])[0]
-                    quote = TwelveDataProvider().latest(instrument, query.get("timeframe", ["5m"])[0])
+                    quote = YahooFinanceProvider().latest(instrument, query.get("timeframe", ["5m"])[0])
                     snapshot = PAPER_PORTFOLIO.snapshot({instrument: quote.close})
                     self._respond(200, "application/json", json.dumps({"snapshot": snapshot.__dict__,
                         "positions": [position.__dict__ for position in snapshot.positions], "live": True,
@@ -313,7 +313,7 @@ def make_handler():
                     quantity = float(payload.get("quantity", 0))
                     if side not in {"BUY", "SELL"} or quantity <= 0:
                         raise ValueError("paper order requires side BUY/SELL and positive quantity")
-                    quote = TwelveDataProvider().latest(instrument, payload.get("timeframe", "5m"))
+                    quote = YahooFinanceProvider().latest(instrument, payload.get("timeframe", "5m"))
                     signed_quantity = quantity if side == "BUY" else -quantity
                     PAPER_PORTFOLIO.apply_paper_fill(instrument, signed_quantity, quote.close)
                     order = {"instrument": instrument, "side": side, "quantity": quantity,
